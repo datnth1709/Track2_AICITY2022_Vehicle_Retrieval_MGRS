@@ -1,0 +1,125 @@
+{
+    "data_loader": {
+        "type": "CityflowVideoTextLoader",
+        "train_path": "/root/paddlejob/workspace/env_run/output/zhangjc/data/aicity/annotations/train_tracks_crop_with_id_motion_clips_colors_types_direction.json",
+        "test_path": "/root/paddlejob/workspace/env_run/output/zhangjc/data/aicity/annotations/test_tracks_crop_with_motion_clips_nl.json",
+        "val_path": "/root/paddlejob/workspace/env_run/output/zhangjc/data/aicity/annotations/test_tracks_crop_with_motion_clips_nl.json",
+        "args": {
+            "video_setting": {
+                "path": "/root/paddlejob/workspace/env_run/output/zhangjc/data/aicity/",
+                "num_frames": 16,
+                "sample": "rand",
+                "fix_start": null,
+                "size": 224,
+                "motion_frames": 16,
+                "reid": true
+            },
+            "text_setting": {
+                "sample": "mt-rand_3"
+            },
+            "batch_size": 20,
+            "transform_setting": 1,
+            "num_workers": 10
+        }
+    },
+    "arch": {
+        "type": "VideoTextFeatureExtractor",
+        "args": {
+            "base_setting": {
+                "type": "FrozenInTime",
+                "args": {
+                    "video_params": {
+                        "model": "SpaceTimeTransformer",
+                        "arch_config": "base_patch16_224",
+                        "num_frames": 16,
+                        "pretrained": true,
+                        "time_init": "zeros",
+                        "img_size": 224,
+                        "motion_frames": 1,
+                        "fusion_params": {
+                            "type": "ContextualizedWeightedHead",
+                            "args": {
+                                "d_model": 256,
+                                "nhead": 8,
+                                "num_layers": 2,
+                                "fc_dim_list": [
+                                    256,
+                                    512,
+                                    1
+                                ]
+                            }
+                        }
+                    },
+                    "text_params": {
+                        "model": "distilbert-base-uncased",
+                        "pretrained": true,
+                        "input": "text"
+                    },
+                    "projection": "minimal",
+                    "load_checkpoint": "pretrained/cc-webvid2m-4f_stformer_b_16_224.pth.tar"
+                }
+            },
+            "text_head_setting": {
+                "type": "ContextualizedWeightedHead",
+                "args": {
+                    "d_model": 256,
+                    "nhead": 8,
+                    "num_layers": 2,
+                    "fc_dim_list": [
+                        256,
+                        512,
+                        1
+                    ]
+                }
+            }
+        }
+    },
+    "loss": {
+        "type": "NormSoftmaxLoss",
+        "args": {
+            "temperature": 0.05
+        }
+    },
+    "contrastive_loss": {
+        "type": "ContrastiveLoss",
+        "args": {
+            "margin": 0.2,
+            "max_violation": true,
+            "direction": "bi",
+            "topk": 1
+        }
+    },
+    "syminfonce_loss": {
+        "type": "SymmetricInfoNCE",
+        "args": {}
+    },
+    "optimizer": {
+        "args": {
+            "lr": 3e-05
+        },
+        "type": "AdamW"
+    },
+    "lr_scheduler": {
+        "type": "LinearWarmupCosineAnnealingLR",
+        "args": {
+            "max_epochs": 20,
+            "warmup_epochs": 1
+        }
+    },
+    "trainer": {
+        "epochs": 20,
+        "save_dir": "record/",
+        "save_period": 2,
+        "type": "trainer",
+        "verbosity": 2
+    },
+    "metrics": [
+        "retrieval_metric_train"
+    ],
+    "log_step": 100,
+    "n_gpu": 4,
+    "name": "cityflow_frozen_cg-wf",
+    "use_amp": true,
+    "test_eval_num": "3",
+    "run_id": 1
+}
